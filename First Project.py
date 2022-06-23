@@ -61,5 +61,6 @@ def Read_Excel(name):
         model.Lines = pyo.Set(ordered = True, initialize = Data["Lines"]["List_of_lines"])                                  #Set of AC lines
         model.Nodes = pyo.Set(ordered = True, initialize = Data["Nodes"]["List_of_nodes"])                                  #Set for nodes
         model.GenUnits = pyo.Set(ordered = True, initialize = [1,2])                                                        #Set of generator units (1 in node 1 & 2 in node 2)
-        model.LoadUnits = pyo.Set(ordered = True, initialize = [1,2])
+        model.LoadUnits = pyo.Set(ordered = True, initialize = [1,2])                                                       #Set of load units (1 in node 2 & 2 in node 3)
+        
 
