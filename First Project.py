@@ -62,5 +62,16 @@ def Read_Excel(name):
         model.Nodes = pyo.Set(ordered = True, initialize = Data["Nodes"]["List_of_nodes"])                                  #Set for nodes
         model.GenUnits = pyo.Set(ordered = True, initialize = [1,2])                                                        #Set of generator units (1 in node 1 & 2 in node 2)
         model.LoadUnits = pyo.Set(ordered = True, initialize = [1,2])                                                       #Set of load units (1 in node 2 & 2 in node 3)
-        
 
+
+        """
+        **** Parameters ****
+        """
+
+        model.Demand_P = pyo.Param(model.Nodes, initialize = Data["Nodes"]["DEMAND-P"])                                     #Active demand of each bus in MW
+        model.Demand_Q = pyo.Param(model.Nodes, initialize = Data["Nodes"]["DEMAND-Q"])                                     #Reactive demand of each bus in MW
+        model.P_min = pyo.Param(model.Nodes, initialize = Data["Nodes"]["GENMIN"])                                          #Minimum production at node
+        model.P_max = pyo.Param(model.Nodes, initialize = Data["Nodes"]["GENCAP"])                                          #Maximum production at node
+        model.Cost_gen = pro.Param(model.Nodes, initialize = Data["Nodes"]["GENCOST"])                                      #Parameter for generation cost for every node
+
+        model.P_line_max = pyo.Param(model.Lines, initialize = Data["Lines"]["Cap"])                                        #Parameter for maximum transfer from node, for every line.
