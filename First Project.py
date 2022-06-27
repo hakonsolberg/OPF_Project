@@ -75,3 +75,38 @@ def Read_Excel(name):
         model.Cost_gen = pro.Param(model.Nodes, initialize = Data["Nodes"]["GENCOST"])                                      #Parameter for generation cost for every node
 
         model.P_line_max = pyo.Param(model.Lines, initialize = Data["Lines"]["Cap"])                                        #Parameter for maximum transfer from node, for every line.
+
+
+        """
+        ***** Variables *****
+        """
+
+        model.delta = pyo.Var(model.Nodes)                                                                                  #Variable for voltage angle on bus for every node
+        model.gen = pyo.(model.Nodes)                                                                                       #Variable generated power on each node
+
+
+
+    """
+    ***** Objective function *****
+    Minimize cost for production (marginal cost for generators)
+    """
+
+
+
+    """
+    ***** Constraints *****
+    """
+
+
+    """
+    ***** General constraints *****
+    """
+
+
+    """
+    ***** Compute the optimization problem ******
+    """
+
+    """
+    Display results
+    """
