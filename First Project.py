@@ -4,6 +4,7 @@ Goal: Develop a method to test OPF in real-time for the distribution network, ma
 Test system: Simple 3-bus system with generation at node 1 & 2, with loads at bus 2 & 3.
 
 Some parts of this code is based on an example for a DCOPF-system in the course "Power Markets" at NTNU.
+The 
 """
 
 import numpy as np
@@ -107,6 +108,13 @@ def Read_Excel(name):
     ***** Compute the optimization problem ******
     """
 
+    opt = SolverFactory("ipopt")                                                                                            #The solver used
+    results = opt.solve(model, load_solutions = True)                                                                       #Solve the problem
+    results.write(num=1)
     """
     Display results
     """
+
+    model.display()                                                                                                         #Shows results
+
+Main()                                                                                                                      #Run the main
