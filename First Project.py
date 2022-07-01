@@ -20,13 +20,17 @@ Sbase=100
 #                [-1.25+3.73*j 2.9167-8.75*j -1.6667+5*j],
 #                [-5+15*j -1.6667+5*j 6.6667 -20*j]])
 
-Y_Bus = np.array([19.7642 3.95 15.81],                                                                                         #Defining the magnitude of the admittance bus
-                 [3.93 9.22 5.27],
-                 [15.811 5.27 21.082])
+Y_Bus = np.array([19.764, 3.95, 15.81],                                                                                         #Defining the magnitude of the admittance bus
+                 [3.93, 9.22, 5.27],
+                 [15.81, 5.27, 21.08])
 
-Theta = np.array([-71.57 108.43 108.435],                                                                                      #Angles of the admittance
-                 [108.53 -71.56 108.435],
-                 [108.435 108.435 -71.565])
+#Theta = np.array([-71.57, 108.43, 108.44],                                                                                      #Angles of the admittance
+#                 [108.53, -71.56, 108.44],
+#                 [108.44, 108.44, -71.57])
+
+Theta = np.array([-1.249, 1.892, 0.276],
+                 [1.894, -1.249, 1.894],
+                 [1.894, 1.894, -1.249])
 def Main():
 
     "Main function that set up the problem and execute the code"
@@ -67,58 +71,67 @@ def Read_Excel(name):
     return(data)
 
 
-    def OPF_model(Data):
+def OPF_model(Data):
 
-        """
-        -- Setting up the optimization model, run it and display the results. ---
-        """
+    """
+    -- Setting up the optimization model, run it and display the results. ---
+    """
 
-        model = pyo.ConcreteModel
+    model = pyo.ConcreteModel
 
-        """
-        ***** Sets (lists with nodes and lines) ****
-        """
+    """
+    ***** Sets (lists with nodes and lines) ****
+    """
 
-        model.Lines     = pyo.Set(ordered = True, initialize = Data["Lines"]["List_of_lines"])                              #Set of AC lines
-        model.Nodes     = pyo.Set(ordered = True, initialize = Data["Nodes"]["List_of_nodes"])                              #Set for nodes
-        model.GenUnits  = pyo.Set(ordered = True, initialize = [1,2])                                                       #Set of generator units (1 in node 1 & 2 in node 2)
-        model.LoadUnits = pyo.Set(ordered = True, initialize = [1,2])                                                       #Set of load units (1 in node 2 & 2 in node 3)
+    model.Lines     = pyo.Set(ordered = True, initialize = Data["Lines"]["List_of_lines"])                              #Set of AC lines
+    model.Nodes     = pyo.Set(ordered = True, initialize = Data["Nodes"]["List_of_nodes"])                              #Set for nodes
+    model.Time      = pyo.Set(ordered = True, initialize = Data["Time"]["d"])                                           #Set for demand variability
+    model.GenUnits  = pyo.Set(ordered = True, initialize = [1,2])                                                       #Set of generator units (1 in node 1 & 2 in node 2)
+    model.LoadUnits = pyo.Set(ordered = True, initialize = [1,2])                                                       #Set of load units (1 in node 2 & 2 in node 3)
 
-        """
-        **** Parameters ****
-        """
+    """
+    **** Parameters ****
+    """
+    model.demand_P  = pyo.Param(model.Nodes, initialize = Data["Nodes"]["DEMAND-P"])
+    model.demand_Q  = pyo.Param(model.Nodes, initialize = Data["Nodes"]["DEMAND-Q"])
+    model.P_min     = pyo.Param(model.Nodes, initialize = Data["Nodes"]["P_MIN"])                                        #Minimum active production at node
+    model.P_max     = pyo.Param(model.Nodes, initialize = Data["Nodes"]["P_MAX"])                                        #Maximum active production at node
+    model.Q_min     = pyo.Param(model.Nodes, initialize = Data["Nodes"]["Q_MIN"])                                        #Minimum reactive production at node
+    model.Q_max     = pyo.Param(model.Nodes, initialize = Data["Nodes"]["Q_MAX"])                                        #Maximum reactive production at node
+    model.Cost_gen  = pyo.Param(model.Nodes, initialize = Data["Nodes"]["GENCOST"])                                      #Parameter for generation cost for every node
+    model.R         = pyo.Param(model.Nodes, initialize = Data["Nodes"]["R"])                                            #Parameter for resistance on line
+    model.X         = pyo.Param(model.Nodes, initialize = Data["Nodes"]["X"])                                            #Parameter for reactance on line
 
-        model.Demand_P  = pyo.Param(model.Nodes, initialize = Data["Nodes"]["DEMAND-P"])                                     #Active demand of each bus in MW
-        model.Demand_Q  = pyo.Param(model.Nodes, initialize = Data["Nodes"]["DEMAND-Q"])                                     #Reactive demand of each bus in MW
-        model.P_min     = pyo.Param(model.Nodes, initialize = Data["Nodes"]["P_MIN"])                                        #Minimum active production at node
-        model.P_max     = pyo.Param(model.Nodes, initialize = Data["Nodes"]["P_MAX"])                                        #Maximum active production at node
-        model.Q_min     = pyo.Param(model.Nodes, initialize = Data["Nodes"]["Q_MIN"])                                        #Minimum reactive production at node
-        model.Q_max     = pyo.Param(model.Nodes, initialize = Data["Nodes"]["Q_MAX"])                                        #Maximum reactive production at node
-        model.Cost_gen  = pro.Param(model.Nodes, initialize = Data["Nodes"]["GENCOST"])                                      #Parameter for generation cost for every node
 
-        #Lines
-        model.P_line_max = pyo.Param(model.Lines, initialize = Data["Lines"]["CAP FROM"])                                    #Parameter for maximum transfer from node, for every line.
-        model.P_line_min = pyo.Param(model.Lines, initialize = Data["Lines"]["CAP TO"])
-        model.line_from  = pyo.Param(model.Lines, initialize = Data["Lines"]["From"])
-        model.line_to    = pyo.Param(model.Lines, initialize = Data["Lines"]["To"])
+    #Lines
+    model.P_line_max = pyo.Param(model.Lines, initialize = Data["Lines"]["CAP FROM"])                                    #Parameter for maximum transfer from node, for every line.
+    model.P_line_min = pyo.Param(model.Lines, initialize = Data["Lines"]["CAP TO"])
+    model.line_from  = pyo.Param(model.Lines, initialize = Data["Lines"]["From"])
+    model.line_to    = pyo.Param(model.Lines, initialize = Data["Lines"]["To"])
 
-        """
-        ***** Variables *****
-        """
+    #Demand variability
 
-        model.delta   = pyo.Var(model.Nodes)                                                                                #Variable for voltage angle on bus for every node
-        model.gen     = pyo.Var(model.Nodes)                                                                                #Variable generated power on each node
-        model.voltage = pyo.Var(model.Nodes)                                                                                #Variable for voltage on on bus for every node
+    model.demand_var = pyo.Param(model.Time, initialize = Data["Time"]["d"])
 
-        #Lines
-        model.flow = pyo.Var(model.Lines)                                                                                   #Variable for power flow on each line
+    """
+    ***** Variables *****
+    """
+
+    model.delta    = pyo.Var(model.Nodes)                                                                                #Variable for voltage angle on bus for every node
+    model.gen      = pyo.Var(model.Nodes)                                                                                #Variable generated power on each node
+    model.voltage  = pyo.Var(model.Nodes)                                                                                #Variable for voltage on on bus for every node
+    #model.demand_P = pyo.Var(model.Nodes)
+    #model.demand_Q = pyo.Var(model.Nodes)
+
+    #Lines
+    model.flow = pyo.Var(model.Lines)                                                                                   #Variable for power flow on each line
 
     """
     ***** Objective function *****
     Minimize cost for production (marginal cost for generators)
     """
     def Objective_function(model):
-        return (sum(model.gen[n]*model.Cost_gen[n] for n in model.Nodes)                                                    #Only one MC per node, need to incorporate real-time
+        return (sum(model.gen[n] * model.Cost_gen[n] for n in model.Nodes)                                                    #Only one MC per node, need to incorporate real-time
     model.OBJ = pyo.Objective(rule = Objective_function, sense = pyo.minimize)                                              #Want to minimize generation cost
 
 
@@ -156,9 +169,24 @@ def Read_Excel(name):
         return(model.flow[l] >= -model.P_line_min[l])
     model.To_flow_L = pyo.Constraint(model.Lines, rule = To_flow)
 
-    #Line flows
+    #Active flows
+    def active_flow(model,l):                                                                                               #Active power flow on line
+        return((((model.voltage[model.line_from])**2)*np.cos(Theta[model.line_to - 1][model.line_from - 1])) - \
+               model.voltage[model.line_from]*model.voltage[model.line_to]*cos(model.delta[model.line_from] - \
+               model.delta[model.line_to] + Theta[model.line_from-1][model.line_to-1]))/(np.sqrt((model.R[l])**2 + (model.X[l])**2))
+    model.active_flow = pyo.Constraint(model.Lines, rule = active_flow)
 
-    def 
+    #Reactive flow
+    def reactive_flow(model,l):
+        return((model.voltage[model.line_from])**2)*np.sin(Theta[model.line_to - 1][model.line_from - 1]) - \
+              model.voltage[model.line_from] * model.voltage[model.line_to] * np.sin(model.delta[model.line_from] - \
+              model.delta[model.line_to] - model.delta[model.line_from] + Theta[model.line_to - 1][model.line_from -1])
+    model.reactive_flow = pyo.Constraint(model.Lines, rule = active_flow)
+
+    #Active power balance P-D = sum (P_ij))
+
+    def active_powbal(model,n):
+        return(model.gen[n]) - model.Demand_P[n]
 
 
     """
@@ -168,6 +196,7 @@ def Read_Excel(name):
     opt = SolverFactory("ipopt")                                                                                            #The solver used
     results = opt.solve(model, load_solutions = True)                                                                       #Solve the problem
     results.write(num=1)
+
     """
     Display results
     """
