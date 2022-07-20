@@ -131,8 +131,8 @@ def OPF_model(Data):
     #model.demand_Q = pyo.Var(model.Nodes)
 
     #Lines
-    model.flow   = pyo.Var(model.Lines, bounds = (-150, 150))                                                               #Variable for power flow on each line
-    #model.reactive_flow = pyo.Var(model.Lines, bounds = (-150, 150))
+    model.active_flow   = pyo.Var(model.Lines, bounds = (-150, 150))                                                               #Variable for power flow on each line
+    model.reactive_flow = pyo.Var(model.Lines, bounds = (-150, 150))
 
     """
     ***** Objective function *****
@@ -185,11 +185,11 @@ def OPF_model(Data):
     model.Min_vol = pyo.Constraint(model.Nodes, rule = Min_vol)
 
     def From_flow(model,l):                                                                                                 #Maximum flow on lines
-        return(model.flow[l] <= model.P_line_max[l])
+        return(model.active_flow[l] <= model.P_line_max[l])
     model.From_flow_L = pyo.Constraint(model.Lines, rule = From_flow)
 
     def To_flow(model,l):                                                                                                   #Minimum flow on lines
-        return(model.flow[l] >= -model.P_line_min[l])
+        return(model.active_flow[l] >= -model.P_line_min[l])
     model.To_flow_L = pyo.Constraint(model.Lines, rule = To_flow)
 
     def Max_del(model,n):
@@ -200,27 +200,21 @@ def OPF_model(Data):
         return(model.delta[n] >= model.Del_min[n])
     model.Min_del = pyo.Constraint(model.Nodes, rule = Min_del)
 
+    #Equations for active and reactive power flow on each line
 
-
-    #Active flows
-    #def active_flow(model,l):                                                                                               #Active power flow on line
-    #    return((((model.flow[l] == model.voltage[l])**2)*np.cos(Theta[model.line_to - 1][model.line_from - 1])) - \
-    #           model.voltage[model.line_from]*model.voltage[model.line_to]*cos(model.delta[model.line_from] - \
-    #           model.delta[model.line_to] + Theta[model.line_from-1][model.line_to-1]))/(np.sqrt((model.R[l])**2 + (model.X[l])**2))
-    #model.active_flow = pyo.Constraint(model.Lines, rule = active_flow)
-
-    #nodes_list = [1,2,3]
     def active_flow(model, l):
-        return model.flow[l] == (((model.voltage[l]**2)*np.cos(Theta[model.line_to[l]-1][model.line_from[l]-1])-\
+        return model.active_flow[l] == (((model.voltage[l]**2)*np.cos(Theta[model.line_to[l]-1][model.line_from[l]-1])-\
                 model.voltage[model.line_from[l]]*model.voltage[model.line_to[l]]*np.cos(Theta[model.line_to[l]-1][model.line_from[l]-1])) / \
                (np.sqrt((model.R[l]**2)+model.X[l]**2)))*Sbase
-    model.active_flow = pyo.Constraint(model.Lines, rule=active_flow)
+    model.Active_flow = pyo.Constraint(model.Lines, rule=active_flow)
 
-    #def reactive_flow(model, l):
-    #    return model.reactive_flow[l] == (((model.voltage[l]**2)*np.sin(Theta[model.line_to[l]-1][model.line_from[l]-1])-\
-    #            model.voltage[model.line_from[l]]*model.voltage[model.line_to[l]]*np.sin(Theta[model.line_to[l]-1][model.line_from[l]-1])) / \
-    #           (np.sqrt((model.R[l]**2)+model.X[l]**2)))*Sbase
-    #model.active_flow = pyo.Constraint(model.Lines, rule=reactive_flow)
+    def reactive_flow(model, l):
+        return model.reactive_flow[l] == (((model.voltage[l]**2)*np.sin(Theta[model.line_to[l]-1][model.line_from[l]-1])-\
+                model.voltage[model.line_from[l]]*model.voltage[model.line_to[l]]*np.sin(Theta[model.line_to[l]-1][model.line_from[l]-1])) / \
+               (np.sqrt((model.R[l]**2)+model.X[l]**2)))*Sbase
+    model.Reactive_flow = pyo.Constraint(model.Lines, rule=reactive_flow)
+
+    
 
     #def active_flow(model,l):
     #    return np.cos(model.voltage[model.line_from[l]])
