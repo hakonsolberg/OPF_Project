@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
+from pyomo.environ import *
 
 Ref_node=1;
 Vbase=115
@@ -35,11 +36,9 @@ def Main():
 
     "Main function that set up the problem and execute the code"
 
-    global Data
     Data = Read_Excel("Data_3bus.xlsx")
 
     OPF_model(Data)                                                                                                         #Run the model with the set data
-
     return()
 
 def Read_Excel(name):
@@ -72,7 +71,6 @@ def Read_Excel(name):
 
 
 def OPF_model(Data):
-
     """
     -- Setting up the optimization model, run it and display the results. ---
     """
@@ -133,7 +131,6 @@ def OPF_model(Data):
     #Lines
     model.active_flow   = pyo.Var(model.Lines, bounds = (-150, 150))                                                               #Variable for power flow on each line
     model.reactive_flow = pyo.Var(model.Lines, bounds = (-150, 150))
-
     """
     ***** Objective function *****
     Minimize cost for production (marginal cost for generators)
@@ -205,16 +202,24 @@ def OPF_model(Data):
     def active_flow(model, l):
         return model.active_flow[l] == (((model.voltage[l]**2)*np.cos(Theta[model.line_to[l]-1][model.line_from[l]-1])-\
                 model.voltage[model.line_from[l]]*model.voltage[model.line_to[l]]*np.cos(Theta[model.line_to[l]-1][model.line_from[l]-1])) / \
-               (np.sqrt((model.R[l]**2)+model.X[l]**2)))*Sbase
+               (np.sqrt((model.R[l]**2)+model.X[l]**2)))
     model.Active_flow = pyo.Constraint(model.Lines, rule=active_flow)
 
     def reactive_flow(model, l):
         return model.reactive_flow[l] == (((model.voltage[l]**2)*np.sin(Theta[model.line_to[l]-1][model.line_from[l]-1])-\
                 model.voltage[model.line_from[l]]*model.voltage[model.line_to[l]]*np.sin(Theta[model.line_to[l]-1][model.line_from[l]-1])) / \
-               (np.sqrt((model.R[l]**2)+model.X[l]**2)))*Sbase
-    model.Reactive_flow = pyo.Constraint(model.Lines, rule=reactive_flow)
+               (np.sqrt((model.R[l]**2)+model.X[l]**2)))
+    model.Reactive_flow = pyo.Constraint(model.Lines, rule = reactive_flow)
 
-    
+    #Active loadbalance
+
+    def active_balance(model,n):
+        return (model.gen_P[n] == model.demand_P[n] / Sbase + sum(model.active_flow[o] for o in model.Nodes))
+    model.Active_balance = pyo.Constraint(model.Nodes, rule = active_balance)
+
+    def reactive_balance(model, n):
+        return (model.gen_Q[n] == model.demand_Q[n] / Sbase + sum(model.reactive_flow[o] for o in model.Nodes))
+    model.Reactive_balance = pyo.Constraint(model.Nodes, rule = reactive_balance)
 
     #def active_flow(model,l):
     #    return np.cos(model.voltage[model.line_from[l]])
